@@ -1,7 +1,7 @@
 ---
 name: claude-code
 description: "Delegate coding to Claude Code CLI (features, PRs)."
-version: 2.2.0
+version: 2.3.0
 author: Hermes Agent + Teknium
 license: MIT
 platforms: [linux, macos, windows]
@@ -25,6 +25,48 @@ Delegate coding tasks to [Claude Code](https://code.claude.com/docs/en/cli-refer
 - **Health check:** `claude doctor` — checks auto-updater and installation health
 - **Version check:** `claude --version` (requires v2.x+)
 - **Update:** `claude update` or `claude upgrade`
+
+## Security Guardrails (Read Before Orchestrating)
+
+These rules apply whenever Hermes delegates to Claude Code on behalf of a Telegram message or any untrusted input source.
+
+### 1. Never pass raw user input directly as the `-p` argument
+
+Raw input can contain shell metacharacters or prompt-injection payloads. Distill the user's intent into a controlled task string first:
+
+```python
+# BAD — user_msg injected directly into shell
+terminal(command=f"claude -p '{user_msg}' --allowedTools 'Read,Edit'")
+
+# GOOD — sanitize and template
+import shlex
+task = f"Fix the bug described here: {user_msg[:500]}"
+terminal(command=f"claude -p {shlex.quote(task)} --allowedTools 'Read,Edit' --max-turns 10",
+         workdir="/Users/ryangherardi/Projects/Active/<project>")
+```
+
+In bash: wrap with `printf '%q'` or use a heredoc to avoid quoting issues.
+
+### 2. Always scope with `--allowedTools`
+
+Never invoke Claude Code without `--allowedTools`. An unscoped run grants all tools including unrestricted Bash execution.
+
+| Task type | Scope |
+|-----------|-------|
+| Read-only analysis | `--allowedTools 'Read,Glob,Grep'` |
+| Code edits only | `--allowedTools 'Read,Edit,MultiEdit'` |
+| Code + tests | `--allowedTools 'Read,Edit,MultiEdit,Bash'` |
+| Full autonomy (confirm with Ryan first) | `--allowedTools 'Read,Edit,MultiEdit,Bash,WebSearch'` |
+
+### 3. Never use `--dangerously-skip-permissions` in automation
+
+Print mode (`-p`) suppresses all dialogs automatically — `--dangerously-skip-permissions` is **never needed** in print mode. For interactive PTY, handle only the one-time workspace trust dialog (tmux Enter). See PTY section below.
+
+### 4. Always pin `workdir`
+
+Pass `workdir=` explicitly. Never default to `~` or the current shell directory.
+
+---
 
 ## Two Orchestration Modes
 
@@ -99,22 +141,30 @@ Claude Code presents up to two confirmation dialogs on first launch. You MUST ha
 tmux send-keys -t <session> Down && sleep 0.3 && tmux send-keys -t <session> Enter
 ```
 
-### Robust Dialog Handling Pattern
-```
-# Launch with permissions bypass
-terminal(command="tmux send-keys -t claude-work 'claude --dangerously-skip-permissions \"your task\"' Enter")
+### Safe Dialog Handling Pattern
 
-# Handle trust dialog (Enter for default "Yes")
+**Prefer print mode** — it skips all dialogs and needs no tmux handling:
+```
+terminal(command="claude -p 'your task' --allowedTools 'Read,Edit' --max-turns 10",
+         workdir="/Users/ryangherardi/Projects/Active/<project>", timeout=120)
+```
+
+For interactive PTY when multi-turn is required — handle only the trust dialog (one-time per directory). **Do not use `--dangerously-skip-permissions`.**
+```
+# Launch Claude Code interactively
+terminal(command="tmux send-keys -t claude-work 'cd /path/to/project && claude' Enter")
+
+# Handle trust dialog ONLY (first visit to this directory) — Enter accepts default "Yes"
 terminal(command="sleep 4 && tmux send-keys -t claude-work Enter")
 
-# Handle permissions dialog (Down then Enter for "Yes, I accept")
-terminal(command="sleep 3 && tmux send-keys -t claude-work Down && sleep 0.3 && tmux send-keys -t claude-work Enter")
+# Wait for Claude to be ready, then send your task
+terminal(command="sleep 3 && tmux send-keys -t claude-work 'Describe the task here' Enter")
 
-# Now wait for Claude to work
-terminal(command="sleep 15 && tmux capture-pane -t claude-work -p -S -60")
+# Capture output
+terminal(command="sleep 20 && tmux capture-pane -t claude-work -p -S -60")
 ```
 
-**Note:** After the first trust acceptance for a directory, the trust dialog won't appear again. Only the permissions dialog recurs each time you use `--dangerously-skip-permissions`.
+**Note:** After the first trust acceptance for a directory, the dialog won't appear again.
 
 ## CLI Subcommands
 

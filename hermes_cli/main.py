@@ -1813,6 +1813,13 @@ def cmd_gateway(args):
     gateway_command(args)
 
 
+def cmd_watcher(args):
+    """Manage the JSON-to-Markdown watcher LaunchAgent."""
+    from hermes_cli.watcher import watcher_command
+
+    return watcher_command(args)
+
+
 def cmd_proxy(args):
     """Local OpenAI-compatible proxy to OAuth providers."""
     # Lazy import — pulls in aiohttp, which is gated behind an extras install
@@ -10696,7 +10703,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "model", "pairing", "plugins", "portal", "postinstall", "profile", "proxy",
         "send", "sessions", "setup",
         "skills", "slack", "status", "tools", "uninstall", "update",
-        "version", "webhook", "whatsapp", "chat", "secrets", "security",
+        "version", "watcher", "webhook", "whatsapp", "chat", "secrets", "security",
         # Help-ish invocations — plugin commands not being listed in
         # top-level --help is an acceptable trade-off for skipping an
         # expensive eager import of every bundled plugin module.
@@ -11513,6 +11520,12 @@ def main():
     # =========================================================================
     from hermes_cli.send_cmd import register_send_subparser
     register_send_subparser(subparsers)
+
+    # =========================================================================
+    # watcher command — JSON session snapshots to Obsidian Markdown
+    # =========================================================================
+    from hermes_cli.watcher import register_watcher_subparser
+    register_watcher_subparser(subparsers)
 
     # =========================================================================
     # login command

@@ -41,15 +41,27 @@ Useful options:
 The processed-file cache lives at `~/.hermes/sessions/.processed.json`.
 Errors are logged to `~/.hermes/watcher.log`.
 
-## Install LaunchAgent
+## LaunchAgent Management
 
 ```bash
-mkdir -p ~/Library/LaunchAgents
-cp ~/Projects/Active/hermes-agent/launchd/com.ryangherardi.hermes-watcher.plist ~/Library/LaunchAgents/
-launchctl unload ~/Library/LaunchAgents/com.ryangherardi.hermes-watcher.plist 2>/dev/null || true
-launchctl load ~/Library/LaunchAgents/com.ryangherardi.hermes-watcher.plist
-launchctl list | grep hermes-watcher
+hermes watcher install      # write, validate, and load the LaunchAgent
+hermes watcher status       # show loaded state, PID/exit status, and log paths
+hermes watcher unload       # stop the LaunchAgent without deleting the plist
+hermes watcher load         # load or reload the installed LaunchAgent
+hermes watcher validate     # validate the installed plist
 ```
+
+The installed plist lives at:
+
+`~/Library/LaunchAgents/com.ryangherardi.hermes-watcher.plist`
+
+Status output includes these troubleshooting paths:
+
+- watcher log: `~/.hermes/watcher.log`
+- launchd stdout: `~/.hermes/watcher.launchd.out.log`
+- launchd stderr: `~/.hermes/watcher.launchd.err.log`
+- processed cache: `~/.hermes/sessions/.processed.json`
+- Markdown output: `~/Projects/Workspace-Monorepo/vault/Logs/Hermes/`
 
 ## Verification
 
