@@ -1,5 +1,23 @@
 # Hermes Agent - Development Guide
 
+
+## Session protocol (mandatory for every AI tool)
+
+On start: read `docs/STATE.md`, then `docs/HANDOFF.md`, then run
+`git log -20 --oneline`.
+
+On finish: rewrite `docs/STATE.md` so it reflects current reality (under 40
+lines), overwrite `docs/HANDOFF.md` with what you touched, what is unverified,
+and the exact next step, then commit with a message in the form
+`what changed: why`.
+
+Durable project facts go in `docs/`, never in tool private memory. Tool memory
+is for preferences and quirks only. Decisions that change direction get one line
+appended to `docs/DECISIONS.md`.
+
+Global conventions that apply to every repo on this machine live in
+`~/ai-context/conventions.md`.
+
 Instructions for AI coding assistants and developers working on the hermes-agent codebase.
 
 ## Development Environment
